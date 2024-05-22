@@ -2,31 +2,32 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const cors = require('cors');
+
 const app = express();
 
-// get config vars
+// Load environment variables from .env file
 dotenv.config();
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
-// Import route files
+// Routes
 const userRoutes = require('./routes/users');
-// const packageRoutes = require('./routes/package');
 const bookingRoutes = require('./routes/bookings');
-// Use route middleware
+
 app.use('/users', userRoutes);
 app.use('/bookings', bookingRoutes);
-// app.use('/packages', packageRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send('Internal Server Error');
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error'
+  });
 });
 
-const PORT = process.env.PORT || 5000; // Use environment variable or 5000 as the default port
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

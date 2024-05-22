@@ -1,37 +1,44 @@
-const mongoose = require('mysql2');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/sequelize'); // Import the sequelize instance
 
-const userSchema = new mongoose.Schema(
-  {
-    firstname: {
-      type: String,
-      required: true,
-    },
-    lastname: {
-      type: String,
-      required: true,
-    },
-    email: {
-      type: String,
-      required: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    contact_no: {
-      type: String,
-      required:true
-    },
-    type: {
-      type: String,
-      required:true
-    }
+const User = sequelize.define('User', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
   },
-  {
-    timestamps: true,
+  firstname: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  lastname: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
+  },
+  type: {
+    type: DataTypes.STRING
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  contact_no: {
+    type: DataTypes.STRING
+  },
+  resetPasswordToken: {
+    type: DataTypes.STRING
+  },
+  resetPasswordExpires: {
+    type: DataTypes.BIGINT
   }
-);
-
-const User = mysql2.model('User', userSchema);
+}, {
+  tableName: 'user_tbl', // Specify the table name if different from the model name
+  timestamps: false // If you don't need timestamps
+});
 
 module.exports = User;

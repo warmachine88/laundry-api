@@ -1,64 +1,69 @@
-const mongoose = require('mysql2');
+// booking.model.js
 
-const bookingSchema = new mongoose.Schema(
-  {
-    firstname: {
-      type: String,
-      required: true,
-    },
-    lastname: {
-      type: String,
-      required: true,
-    },
-    contact_no: {
-      type: Number,
-      required: true,
-    },
-    service: {
-      type: String,
-      required: true,
-    },
-    items:[
-      {
-        type:String,
-        required:true
-      }
-    ],
-    address:{
-      type:String,
-      required:true
-    },
-    zipcode:{
-      type:String,
-      required:true
-    },
-    timedelivery:{
-      type:String,
-      
-    },
-    weight: {
-      type:String,
-      required:true,
-    }
-    ,
-    departure_date: {
-        type: String,
-        required: true,
-    },
-    return_date: {
-        type: String,
-        required: true,
-    },
-    total_price: {
-        type: Number,
-        required: true,
-    },
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/sequelize');
+
+const Booking = sequelize.define('tbl_booking', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
   },
-  {
-    timestamps: true,
+  user_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  firstname: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  lastname: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  service: {
+    type: DataTypes.JSON,
+    allowNull: false
+  },
+  contact_no: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  reservation_date: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  return_date: {
+    type: DataTypes.DATE,
+    allowNull: false
+  },
+  address: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  zip_code: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  time_delivery: {
+    type: DataTypes.TIME,
+    allowNull: false
+  },
+  weights: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  total_of_bills: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false
   }
-);
-
-const Booking = mysql2.model('Booking', bookingSchema);
+}, {
+  tableName: 'booking_tbl',
+  timestamps: false
+});
 
 module.exports = Booking;

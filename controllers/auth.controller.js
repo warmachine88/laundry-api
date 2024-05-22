@@ -2,34 +2,33 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const crypto = require('crypto');
 
-// get config vars
+// Load environment variables from .env file
 dotenv.config();
 
-// access config var
-process.env.TOKEN_SECRET;
-
 module.exports = {
-  authenticateToken : (req, res, next) => {
+  authenticateToken: (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (token == null) return res.sendStatus(401);
-  
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
     jwt.verify(token, process.env.TOKEN_SECRET, (err, user) => {
-      console.log(err);
-      if (err) return res.sendStatus(403);
+      if (err) {
+        console.error('Token verification error:', err.message);
+        return res.status(403).json({ error: 'Forbidden' });
+      }
       req.user = user;
       next();
     });
   },
 
-  generateAccessToken : (username) => {
-    return jwt.sign(username, process.env.TOKEN_SECRET, { expiresIn: '1000000000s' });
+  generateAccessToken: (username) => {
+    return jwt.sign(username, process.env.TOKEN_SECRET, { expiresIn: '1h' }); // Adjust expiry time as needed
   },
   
-  generateRandomToken : () => {
+  generateRandomToken: () => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const hashResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
     return hashResetToken;
   }
-}
+};

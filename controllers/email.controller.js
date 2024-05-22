@@ -1,17 +1,17 @@
 const nodemailer = require('nodemailer');
+
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false, // set to false if you want to trust self-signed certificates
+  secure: false,
   auth: {
     user: 'travelandtour757@gmail.com',
     pass: 'cdqynlfnvkbtbqni',
   },
   tls: {
-    rejectUnauthorized: false, // set to false to trust self-signed certificates
+    rejectUnauthorized: false,
   },
 });
-
 
 const sendPasswordResetEmail = async (toEmail, resetToken, user) => {
   const mailOptions = {

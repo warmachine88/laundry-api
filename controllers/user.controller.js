@@ -1,90 +1,60 @@
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const User = require('../models/users.model');
 const emailController = require('./email.controller');
 const authController = require('./auth.controller');
-const bcrypt = require('bcrypt');
-const db = require('./db.controller'); // Import the database connection
-const jwt = require('jsonwebtoken');
 
 module.exports = {
-
-  async ensureTableExists() {
+  ensureTableExists: async () => {
     try {
-      const tableCheckQuery = `
-        SELECT 1 FROM user_tbl LIMIT 1;
-      `;
-      await db.execute(tableCheckQuery);
-    } catch (error) {
-      if (error.code === 'ER_NO_SUCH_TABLE') {
-        // Table doesn't exist, create it
-        const createTableQuery = `
-          CREATE TABLE IF NOT EXISTS user_tbl (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            firstname VARCHAR(255) NOT NULL,
-            lastname VARCHAR(255) NOT NULL,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            type VARCHAR(50),
-            password VARCHAR(255) NOT NULL,
-            contact_no VARCHAR(20),
-            resetPasswordToken VARCHAR(255),
-            resetPasswordExpires BIGINT
-          );
-        `;
-        await db.execute(createTableQuery);
-        console.log('Created user_tbl table successfully.');
+      const tableExists = await User.sequelize.getQueryInterface().showAllTables();
+      if (!tableExists.includes('user_tbl')) {
+        await User.sync();
+        console.log('User table created successfully.');
       } else {
-        throw error; // Throw any other errors not related to table creation
+        console.log('User table already exists.');
       }
+    } catch (error) {
+      console.error('Error ensuring table exists:', error);
     }
   },
 
   login: async (req, res) => {
     try {
-      await module.exports.ensureTableExists(); // Ensure table exists
+      await module.exports.ensureTableExists();
       const { email, password } = req.body;
-      const sql = 'SELECT * FROM user_tbl WHERE email = ?';
-      const [result] = await db.execute(sql, [email]);
-      if (!result[0]) {
-        res.status(401).json({ message: 'Incorrect Username', status: 401 });
-        return;
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
+        return res.status(401).json({ message: 'Incorrect Username', status: 401 });
       }
-      const isValid = await bcrypt.compare(password, result[0].password);
+      const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
-        res.status(401).json({ message: 'Incorrect Password', status: 401 });
-      } else {
-        // generate a token
-        const token = authController.generateAccessToken({ username: email });
-        const userProfile = {
-          id: result[0].id,
-          firstname: result[0].firstname,
-          lastname: result[0].lastname,
-          email: result[0].email,
-          contact_no: result[0].contact_no,
-          type:result[0].type
-        };
-  
-        res.status(200).json({  token, userProfile });
+        return res.status(401).json({ message: 'Incorrect Password', status: 401 });
       }
+      const token = authController.generateAccessToken({ username: email });
+      const userProfile = {
+        id: user.id,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        email: user.email,
+        contact_no: user.contact_no,
+        type: user.type
+      };
+      res.status(200).json({ token, userProfile });
     } catch (error) {
       console.error(error.message);
       res.status(500).json({ message: 'Internal server error' });
     }
   },
-  // Add this function to users.controller.js
+
   getUserByToken: async (req, res) => {
     try {
-      await module.exports.ensureTableExists(); // Ensure table exists
+      await module.exports.ensureTableExists();
       const { token } = req.body;
-
-      console.log(token)
       jwt.verify(token, process.env.TOKEN_SECRET, (err, user) => {
-
-      console.log(err,user)
-
         if (err) {
-          // If the token is invalid or expired, return an error.
           return res.status(401).json({ message: 'Invalid or expired token', status: 401 });
         }
-  
-        // If the token is valid, user will contain the decoded token payload.
         res.status(200).json({ user });
       });
     } catch (error) {
@@ -92,59 +62,45 @@ module.exports = {
       res.status(500).json({ message: 'Internal server error' });
     }
   },
+
   signUp: async (req, res) => {
     const { firstname, lastname, email, type, password, contact_no } = req.body;
     try {
-      // await db.createDatabaseIfNotExists()
-      await module.exports.ensureTableExists(); // Ensure table exists
-        // Check if the email already exists in the database
-        const [existingUsers] = await db.execute('SELECT * FROM user_tbl WHERE email = ?', [email]);
-        if (existingUsers.length > 0) {
-            return res.status(400).json({ error: 'Email already exists' });
-        }
-
-        // Hash the password
-        const hash = await bcrypt.hash(password, 10);
-
-        // Insert the hashed password into the database
-        const sql = 'INSERT INTO user_tbl (firstname, lastname, email, type, password, contact_no) VALUES (?, ?, ?, ?, ?, ?)';
-        const values = [firstname, lastname, email, type, hash, contact_no];
-
-        const [result] = await db.execute(sql, values);
-        res.status(201).json({ message: 'Created successfully', id: result.insertId });
-    } catch (err) {
-        console.error('Error creating user:', err);
-        res.status(500).json({ error: 'Internal server error' });
+      await module.exports.ensureTableExists();
+      const existingUser = await User.findOne({ where: { email } });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Email already exists' });
+      }
+      const hash = await bcrypt.hash(password, 10);
+      const newUser = await User.create({
+        firstname,
+        lastname,
+        email,
+        type,
+        password: hash,
+        contact_no
+      });
+      res.status(201).json({ message: 'Created successfully', id: newUser.id });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   },
+
   forgotPassword: async (req, res) => {
     try {
-      await module.exports.ensureTableExists(); // Ensure table exists
+      await module.exports.ensureTableExists();
       const { email } = req.body;
-      const sql = 'SELECT * FROM user_tbl WHERE email = ?'; // Assuming 'user_tbl' is your table name
-      const [result] = await db.execute(sql, [email]);
-  
-      if (result.length === 0) {
+      const user = await User.findOne({ where: { email } });
+      if (!user) {
         return res.status(404).json({ message: 'User not found', status: 404 });
       }
-  
-      const user = result[0];
-  
-      // Generate a unique reset token (e.g., a random string)
-      const resetToken = authController.generateRandomToken(); // Implement this function to generate a token
-      const tokenExpiration = Date.now() + 3600000; // Token expires in 1 hour
-  
-      // Store the reset token and its expiration time in the user's record
-      const updateSql = 'UPDATE user_tbl SET resetPasswordToken = ?, resetPasswordExpires = ? WHERE email = ?';
-      await db.execute(updateSql, [resetToken, tokenExpiration, email]);
-  
-      // Send a password reset email
-      const emailSent = await emailController.sendPasswordResetEmail(
-        user.email,
-        resetToken,
-        user
-      );
-  
+      const resetToken = authController.generateRandomToken();
+      const tokenExpiration = Date.now() + 3600000;
+      user.resetPasswordToken = resetToken;
+      user.resetPasswordExpires = tokenExpiration;
+      await user.save();
+      const emailSent = await emailController.sendPasswordResetEmail(user.email, resetToken, user);
       if (emailSent) {
         res.status(200).json({ message: 'Email sent successfully', status: 200 });
       } else {
@@ -158,33 +114,21 @@ module.exports = {
 
   resetPassword: async (req, res) => {
     try {
-      await module.exports.ensureTableExists(); // Ensure table exists
+      await module.exports.ensureTableExists();
       const resetToken = req.params.id;
       const { newPassword } = req.body;
-  
-      const sql = 'SELECT * FROM user_tbl WHERE resetPasswordToken = ?';
-      const [result] = await db.execute(sql, [resetToken]);
-  
-      if (result.length === 0 || result[0].resetPasswordExpires < Date.now()) {
+      const user = await User.findOne({ where: { resetPasswordToken: resetToken } });
+      if (!user || user.resetPasswordExpires < Date.now()) {
         return res.status(400).json({ message: 'Invalid or expired token', status: 400 });
       }
-  
-      const user = result[0];
-  
-      // Verify that the new password is different from the previous one
       const isMatch = await bcrypt.compare(newPassword, user.password);
-  
       if (isMatch) {
         return res.status(400).json({ message: 'The previous password and the new password must be different.', status: 400 });
       }
-  
-      // Hash the new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-  
-      // Update the user's password and clear the reset token and expiration time
-      const updateSql = 'UPDATE user_tbl SET password = ?, resetPasswordToken = NULL, resetPasswordExpires = NULL WHERE id = ?';
-      await db.execute(updateSql, [hashedPassword, user.id]);
-  
+      user.password = await bcrypt.hash(newPassword, 10);
+      user.resetPasswordToken = null;
+      user.resetPasswordExpires = null;
+      await user.save();
       res.status(200).json({ message: 'Password reset successfully', status: 200 });
     } catch (error) {
       console.error(error);
@@ -192,11 +136,11 @@ module.exports = {
     }
   },
 
-  updatePasswordOld : async (req, res) => {
+  updatePassword: async (req, res) => {
     try {
-      await module.exports.ensureTableExists(); // Ensure table exists
+      await module.exports.ensureTableExists();
       const { email, oldPassword, newPassword } = req.body;
-      const user = await User.findOne({ email: email });
+      const user = await User.findOne({ where: { email } });
       if (!user) {
         return res.status(400).json({ message: 'Invalid user email', status: 400 });
       }
@@ -208,10 +152,7 @@ module.exports = {
       if (isMatch) {
         return res.status(400).json({ message: 'The previous password and the new password must be different.', status: 400 });
       }
-      // Hash the new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      // Update the user's password
-      user.password = hashedPassword;
+      user.password = await bcrypt.hash(newPassword, 10);
       await user.save();
       res.status(200).json({ message: 'Update your password successfully', status: 200 });
     } catch (error) {
@@ -220,100 +161,60 @@ module.exports = {
     }
   },
 
-  updatePassword: async (req, res) => {
+  getAll: async (req, res) => {
     try {
-      await module.exports.ensureTableExists(); // Ensure table exists
-      const { email, oldPassword, newPassword } = req.body;
-      const sql = 'SELECT * FROM user_tbl WHERE email = ?'; // Assuming 'user_tbl' is your table name
-      const [result] = await db.execute(sql, [email]);
-  
-      if (result.length === 0) {
-        return res.status(400).json({ message: 'Invalid user email', status: 400 });
-      }
-  
-      const user = result[0];
-  
-      const isValid = await bcrypt.compare(oldPassword, user.password);
-  
-      if (!isValid) {
-        return res.status(404).json({ message: 'Invalid old password', status: 404 });
-      }
-  
-      const isMatch = await bcrypt.compare(newPassword, user.password);
-  
-      if (isMatch) {
-        return res.status(400).json({ message: 'The previous password and the new password must be different.', status: 400 });
-      }
-  
-      // Hash the new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-  
-      // Update the user's password
-      const updateSql = 'UPDATE user_tbl SET password = ? WHERE email = ?';
-      await db.execute(updateSql, [hashedPassword, email]);
-  
-      res.status(200).json({ message: 'Update your password successfully', status: 200 });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  },
-
-  getAll : async (req, res) => {
-    try {
-      await module.exports.ensureTableExists(); // Ensure table exists
-      const sql = 'SELECT * FROM user_tbl';
-      const [result] = await db.execute(sql);
-  
-      res.status(200).json(result);
+      await module.exports.ensureTableExists();
+      const users = await User.findAll();
+      res.status(200).json(users);
     } catch (error) {
       console.error('Error querying the database:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
 
-  getById : async (req, res) => {
+  getById: async (req, res) => {
     try {
-      await module.exports.ensureTableExists(); // Ensure table exists
+      await module.exports.ensureTableExists();
       const { id } = req.params;
-      const sql = 'SELECT * FROM user_tbl WHERE id = ?';
-      const [result] = await db.execute(sql, [id]);
-      if (!result[0]) {
+      const user = await User.findByPk(id);
+      if (!user) {
         return res.status(404).json({ message: 'No data found', status: 404 });
       }
-      res.status(200).json(result[0]);
+      res.status(200).json(user);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }
   },
 
-  updateById : async(req, res) => {
+  updateById: async (req, res) => {
     try {
-      let { id } = req.params;
-      const { firstname, lastname, email,type,contact_no } = req.body;
-      console.log(req.body)
-      const sql = 'UPDATE user_tbl SET firstname = ?, lastname = ?, email = ?, type = ?, contact_no = ? WHERE id = ?';
-      const [result] = await db.execute(sql, [firstname, lastname, email, type, contact_no, id,]);
-      console.log(result)
-      if (result.affectedRows === 0) {
-        return res.status(404).json({ message: 'No data found to update', status: 404 })
+      const { id } = req.params;
+      const { firstname, lastname, email, type, contact_no } = req.body;
+      const [updatedRows] = await User.update({
+        firstname,
+        lastname,
+        email,
+        type,
+        contact_no
+      }, {
+        where: { id }
+      });
+      if (updatedRows === 0) {
+        return res.status(404).json({ message: 'No data found to update', status: 404 });
       }
       res.status(200).json({ message: 'Update successfully', status: 200 });
     } catch (error) {
-      res.status(500).json({message: error.message})
+      res.status(500).json({ message: error.message });
     }
   },
 
   deleteById: async (req, res) => {
     try {
       const { id } = req.params;
-      const sql = 'DELETE FROM user_tbl WHERE id = ?'; // Assuming 'user_tbl' is your table name
-      const [result] = await db.execute(sql, [id]);
-  
-      if (result.affectedRows === 0) {
+      const deletedRows = await User.destroy({ where: { id } });
+      if (deletedRows === 0) {
         return res.status(404).json({ message: 'No data found to delete', status: 404 });
       }
-  
       res.status(200).json({ message: 'Deleted successfully', status: 200 });
     } catch (error) {
       console.error(error);
@@ -323,10 +224,8 @@ module.exports = {
 
   deleteAll: async (req, res) => {
     try {
-      const sql = 'DELETE FROM user_tbl'; // Assuming 'user_tbl' is your table name
-      const [result] = await db.execute(sql);
-      
-      if (result.affectedRows === 0) {
+      const deletedRows = await User.destroy({ where: {} });
+      if (deletedRows === 0) {
         return res.status(404).json({ message: 'No data found to delete', status: 404 });
       }
       res.status(200).json({ message: 'Deleted all data successfully', status: 200 });
@@ -335,4 +234,4 @@ module.exports = {
       res.status(500).send('Error deleting data');
     }
   },
-}
+};
