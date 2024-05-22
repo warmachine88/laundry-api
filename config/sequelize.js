@@ -1,7 +1,7 @@
 const { Sequelize } = require('sequelize');
 
 // Initialize Sequelize instance with database credentials
-const sequelize = new Sequelize('mysql://root:@localhost:3306', {
+const sequelize = new Sequelize('mysql://root:@localhost:3306/laundry_db', {
   dialect: 'mysql',
 });
 
@@ -32,14 +32,13 @@ createDatabaseIfNotExists()
     console.error('Error checking database:', error);
   });
 
-  // Test the connection
+// Test the connection
 sequelize.authenticate()
-.then(() => {
-  console.log('Connection has been established successfully.');
-})
-.catch(err => {
-  console.error('Unable to connect to the database:', err);
-});
-
+  .then(() => {
+    console.log('Connection has been established successfully.');
+  })
+  .catch(err => {
+    console.error('Unable to connect to the database:', err);
+  });
 
 module.exports = sequelize;

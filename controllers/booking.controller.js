@@ -2,6 +2,14 @@ const Booking = require('../models/bookings.model');
 
 // Define controller methods
 const bookingController = {
+  ensureTableExists: async () => {
+    try {
+      await Booking.sync();
+      console.log('Booking table is ready.');
+    } catch (error) {
+      console.error('Error syncing booking table:', error);
+    }
+  },
   // Method to fetch all bookings
   getAllBookings: async (req, res) => {
     try {
@@ -56,5 +64,12 @@ const bookingController = {
     }
   }
 };
+
+// Ensure the booking table exists
+bookingController.ensureTableExists().then(() => {
+  console.log('Booking table check completed.');
+}).catch(error => {
+  console.error('Error checking booking table:', error);
+});
 
 module.exports = bookingController;
