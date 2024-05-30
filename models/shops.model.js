@@ -2,13 +2,18 @@ const { DataTypes } = require('sequelize');
 const sequelize = require('../config/sequelize');
 
 const Shops = sequelize.define('shops_tbl', {
+    id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true
+      },
     name: {
         type: DataTypes.STRING,
-        allowNull: false
+        
     },
     logo: {
-        type: DataTypes.BLOB,
-        allowNull: false
+        type: DataTypes.STRING,
+        
     },
     tagline: {
         type: DataTypes.STRING
@@ -21,7 +26,7 @@ const Shops = sequelize.define('shops_tbl', {
     },
     services: {
         type: DataTypes.STRING, // You may want to consider using ENUM instead of STRING if services are predefined
-        allowNull: false
+        
     },
     contact: {
         type: DataTypes.JSON // Assuming contact will be an array of objects containing contact numbers and emails

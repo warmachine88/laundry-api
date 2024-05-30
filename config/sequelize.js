@@ -1,9 +1,17 @@
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize('mysql://root:@localhost:3306/', {
-  dialect: 'ysql',
-  logging: false
-});
+const sequelize = new Sequelize(
+  process.env.DB_NAME,
+  process.env.DB_USERNAME,
+  process.env.DB_PASSWORD,
+  {
+    host: process.env.DB_HOST,
+    dialect: 'mysql',
+    logging: false,
+  }
+);
+
+module.exports = sequelize;
 
 async function createDatabaseIfNotExists() {
   try {
@@ -26,7 +34,7 @@ async function createDatabaseIfNotExists() {
 async function createTablesIfNotExists() {
   try {
     await sequelize.query(`USE laundry_db`);
-    await sequelize.sync({ force: true }); // Create tables if they don't exist
+    await sequelize.sync(); // Create tables if they don't exist
     console.log('Tables created successfully.');
   } catch (error) {
     console.error('Error creating tables:', error);
