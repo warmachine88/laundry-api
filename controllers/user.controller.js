@@ -5,23 +5,8 @@ const emailController = require('./email.controller');
 const authController = require('./auth.controller');
 
 module.exports = {
-  ensureTableExists: async () => {
-    try {
-      const tableExists = await User.sequelize.getQueryInterface().showAllTables();
-      if (!tableExists.includes('user_tbl')) {
-        await User.sync();
-        console.log('User table created successfully.');
-      } else {
-        console.log('User table already exists.');
-      }
-    } catch (error) {
-      console.error('Error ensuring table exists:', error);
-    }
-  },
-
   login: async (req, res) => {
     try {
-      await module.exports.ensureTableExists();
       const { email, password } = req.body;
       const user = await User.findOne({ where: { email } });
       if (!user) {
@@ -49,7 +34,6 @@ module.exports = {
 
   getUserByToken: async (req, res) => {
     try {
-      await module.exports.ensureTableExists();
       const { token } = req.body;
       jwt.verify(token, process.env.TOKEN_SECRET, (err, user) => {
         if (err) {
@@ -66,7 +50,6 @@ module.exports = {
   signUp: async (req, res) => {
     const { firstname, lastname, email, type, password, contact_no } = req.body;
     try {
-      await module.exports.ensureTableExists();
       const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
         return res.status(400).json({ error: 'Email already exists' });
@@ -89,7 +72,6 @@ module.exports = {
 
   forgotPassword: async (req, res) => {
     try {
-      await module.exports.ensureTableExists();
       const { email } = req.body;
       const user = await User.findOne({ where: { email } });
       if (!user) {
@@ -114,7 +96,6 @@ module.exports = {
 
   resetPassword: async (req, res) => {
     try {
-      await module.exports.ensureTableExists();
       const resetToken = req.params.id;
       const { newPassword } = req.body;
       const user = await User.findOne({ where: { resetPasswordToken: resetToken } });
@@ -138,7 +119,6 @@ module.exports = {
 
   updatePassword: async (req, res) => {
     try {
-      await module.exports.ensureTableExists();
       const { email, oldPassword, newPassword } = req.body;
       const user = await User.findOne({ where: { email } });
       if (!user) {
@@ -163,7 +143,6 @@ module.exports = {
 
   getAll: async (req, res) => {
     try {
-      await module.exports.ensureTableExists();
       const users = await User.findAll();
       res.status(200).json(users);
     } catch (error) {
@@ -174,7 +153,6 @@ module.exports = {
 
   getById: async (req, res) => {
     try {
-      await module.exports.ensureTableExists();
       const { id } = req.params;
       const user = await User.findByPk(id);
       if (!user) {
@@ -235,3 +213,4 @@ module.exports = {
     }
   },
 };
+

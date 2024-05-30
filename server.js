@@ -15,9 +15,11 @@ app.use(bodyParser.json());
 // Routes
 const userRoutes = require('./routes/users');
 const bookingRoutes = require('./routes/bookings');
+const shopRoutes = require('./routes/shops');
 
 app.use('/users', userRoutes);
 app.use('/bookings', bookingRoutes);
+app.use('/shops', shopRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

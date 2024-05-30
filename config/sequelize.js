@@ -1,8 +1,8 @@
 const { Sequelize } = require('sequelize');
 
-// Initialize Sequelize instance with database credentials
-const sequelize = new Sequelize('mysql://root:@localhost:3306/laundry_db', {
-  dialect: 'mysql',
+const sequelize = new Sequelize('mysql://root:@localhost:3306/', {
+  dialect: 'ysql',
+  logging: false
 });
 
 async function createDatabaseIfNotExists() {
@@ -13,7 +13,7 @@ async function createDatabaseIfNotExists() {
 
     if (results.length === 0) {
       // If the database doesn't exist, create it
-      await sequelize.query('CREATE DATABASE laundry_db');
+      await sequelize.query('CREATE DATABASE IF NOT EXISTS laundry_db');
       console.log('Database "laundry_db" created successfully.');
     } else {
       console.log('Database "laundry_db" already exists.');
@@ -23,22 +23,21 @@ async function createDatabaseIfNotExists() {
   }
 }
 
-// Call the function to create the database if it doesn't exist
-createDatabaseIfNotExists()
-  .then(() => {
-    console.log('Database check completed.');
-  })
-  .catch(error => {
-    console.error('Error checking database:', error);
-  });
+async function createTablesIfNotExists() {
+  try {
+    await sequelize.query(`USE laundry_db`);
+    await sequelize.sync({ force: true }); // Create tables if they don't exist
+    console.log('Tables created successfully.');
+  } catch (error) {
+    console.error('Error creating tables:', error);
+  }
+}
 
-// Test the connection
-sequelize.authenticate()
-  .then(() => {
-    console.log('Connection has been established successfully.');
-  })
-  .catch(err => {
-    console.error('Unable to connect to the database:', err);
-  });
+async function initDatabase() {
+  await createDatabaseIfNotExists();
+  await createTablesIfNotExists();
+}
+
+initDatabase();
 
 module.exports = sequelize;
