@@ -64,4 +64,14 @@ const Booking = sequelize.define('tbl_booking', {
   timestamps: false
 });
 
+// Ensure that the table is created if it doesn't exist
+(async () => {
+    try {
+        await sequelize.sync();
+        console.log("Table 'booking_tbl' created (if not exists) successfully.");
+    } catch (error) {
+        console.error('Error synchronizing database:', error);
+    }
+})();
+
 module.exports = Booking;

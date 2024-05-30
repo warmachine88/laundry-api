@@ -47,20 +47,45 @@ exports.getShopById = async (req, res) => {
 
 // Create a new shop
 exports.createShop = async (req, res) => {
-  try {
-    console.log('Creating a new shop...');
-    const shop = await Shops.create(req.body);
-    console.log(`Created shop with ID ${shop.id}.`);
-    res.status(201).json(shop);
-  } catch (error) {
-    console.error('Error creating shop:', error);
-    if (error.name === 'SequelizeValidationError') {
-      res.status(400).json({ message: 'Invalid request. Please check your input.', errors: error.errors });
-    } else {
-      res.status(500).json({ message: 'Internal Server Error' });
+    try {
+      console.log('Creating a new shop...');
+  
+      // Extract and validate the input
+      const { name, logo, tagline, location, facebook, services, contact } = req.body;
+  
+      if (!name || !location) {
+        return res.status(400).json({ message: 'Name and location are required fields.' });
+      }
+  
+      // Ensure services and contact are correctly formatted as JSON strings
+      const formattedServices = Array.isArray(services) ? JSON.stringify(services) : services;
+      const formattedContact = typeof contact === 'object' ? JSON.stringify(contact) : contact;
+  
+      // Create the shop
+      const shop = await Shops.create({
+        name,
+        logo,
+        tagline,
+        location,
+        facebook,
+        services: formattedServices,
+        contact: formattedContact
+      });
+  
+      console.log(`Created shop with ID ${shop.id}.`);
+      res.status(201).json(shop);
+    } catch (error) {
+      console.error('Error creating shop:', error);
+  
+      if (error.name === 'SequelizeValidationError') {
+        res.status(400).json({ message: 'Invalid request. Please check your input.', errors: error.errors });
+      } else {
+        res.status(500).json({ message: 'Internal Server Error' });
+      }
     }
-  }
-};
+  };
+  
+  
 
 // Update a shop
 exports.updateShop = async (req, res) => {

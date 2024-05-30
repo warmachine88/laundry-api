@@ -38,7 +38,17 @@ const User = sequelize.define('User', {
   }
 }, {
   tableName: 'user_tbl', // Specify the table name if different from the model name
-  timestamps: true // If you don't need timestamps
+  timestamps: false // If you don't need timestamps
 });
+
+// Ensure that the table is created if it doesn't exist
+(async () => {
+    try {
+        await sequelize.sync();
+        console.log("Table 'user_tbl' created (if not exists) successfully.");
+    } catch (error) {
+        console.error('Error synchronizing database:', error);
+    }
+})();
 
 module.exports = User;
