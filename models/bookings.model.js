@@ -43,10 +43,6 @@ const Booking = sequelize.define('tbl_booking', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  zip_code: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
   time_delivery: {
     type: DataTypes.TIME,
     allowNull: false
